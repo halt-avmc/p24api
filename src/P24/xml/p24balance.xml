@@ -1,0 +1,8 @@
+<?php return
+"<oper>cmt</oper>
+<wait>3</wait>
+<test>{test}</test>
+<payment>
+<prop name=\"cardnum\" value=\"{card}\" />
+<prop name=\"country\" value=\"UA\" />
+</payment>";

@@ -1,3 +1,5 @@
+.ftpconfig
+composer.lock
 composer.phar
 /vendor/
 

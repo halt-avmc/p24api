@@ -1,9 +1,5 @@
 {
     "name": "halt/p24",
-    "version": "1.0.0",
-    "autoload": {
-        "psr-0": {"P24": "src/"}
-    },
     "require": {
         "nategood/httpful": "^0.2.20"
     }

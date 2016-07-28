@@ -1,71 +1,41 @@
 <?php
 
-namespace P24;
-use P24Data;
+namespace halt\P24;
 
-class Balance extends P24Data
+use halt\P24\P24Request;
+
+class Balance extends P24Request
 {
+  const BALANCE = 'balance';
+  protected $acc;
   protected $wait;
   protected $test;
-  protected $payments = [];
 
   protected static $xmlRequest = '<?xml version="1.0" encoding="UTF-8"?>
-  <request version="1.0">
+  <request version="{{version}}">
     <merchant>
-      <id></id>
-      <signature></signature>
+      <id>{{merchant_id}}</id>
+      <signature>{{calculated_signature}}</signature>
     </merchant>
     <data>
       <oper>cmt</oper>
-      <wait></wait>
-      <test></test>
-      <payment id="">
-        <prop name="cardnum" value="" />
+      <wait>{{wait}}</wait>
+      <test>{{merchant_test}}</test>
+      <payment id="{{payment_id}}">
+        <prop name="cardnum" value="{{merchant_account}}" />
         <prop name="country" value="UA" />
       </payment>
     </data>
   </request>';
 
-  public function __construct($wait=0, $test = false){
+  public function __construct($acc, $wait, $test){
+    $this->acc  = $acc;
     $this->wait = $wait;
     $this->test = $test;
-    parent::__construct("cmt");
-
-    $this->data->addChild("wait", $wait);
-    $this->data->addChild("test", $test?1:0);
-
-    $dataFields = array_merge($this->dataFields,
-    [
-      'wait',
-      'test',
-      'payment'=>[
-        'prop'=>'@cardnum',
-        'prop'=>'@country',
-      ],
-    ]);
   }
 
   public static function getXML(){
     return self::$xmlRequest;
-  }
-
-  /**
-   * @param  string $card
-   * @return void
-   */
-  public function addCard($card, $payId=NULL){
-    if ($payId === NULL)
-      $this->payments[] = $card;
-    else
-      $this->payments[$payId] = $card;
-  }
-
-  /**
-   * @param  string $acc
-   * @return void
-   */
-  public function addAccount($acc, $payId=NULL){
-    $this->addCard($acc, $payId);
   }
 
   public function serialize()

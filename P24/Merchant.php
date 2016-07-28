@@ -1,67 +1,54 @@
 <?php
 
-namespace P24;
+namespace halt\P24;
 
-use P24\Balance;
+use halt\P24\Card;
 
 class Merchant {
 
   private $_id;
   private $_password;
-  private $_defaultAcc;
-  private $account = [];
+  private $_test;
+
+  private $_account = ['default'=>null];
 
   /**
-   * @param  array $conf confiuration array for merchant. Keys 'id', 'password'
+   * @param  array $conf confiuration array for merchant. Keys 'id', 'password', 'account', 'test'
    * @return void
    */
    public function __construct($conf){
      if(is_array($conf)){
-       $this->_id         = array_key_exists("id",       $conf) ? $conf['id']       : false;
-       $this->_pass       = array_key_exists("password", $conf) ? $conf['password'] : false;
-       $this->_defaultAcc = array_key_exists("account",  $conf) ? $conf['account']  : false;
-
-       $this->account[$this->_defaultAcc] = false;
+       $this->_id       = array_key_exists("id",       $conf) ? $conf['id']       : false;
+       $this->_password = array_key_exists("password", $conf) ? $conf['password'] : false;
+       $this->_test     = array_key_exists("test",     $conf) ? $conf['test']     : false;
      }
    }
 
-   /**
-    *
-    */
-   public function setId($id)
-   {
-     $this->_id=$id;
-   }
    public function getId()
    {
      return $this->_id;
    }
-   public function setPassword($password)
-   {
-     $this->_password=$password;
-   }
+
    public function getPassword()
    {
      return $this->_password;
    }
 
-   public function addAccount($acc)
+   public function account($acc = null)
    {
-     $this->account[$acc]['card_number']=$acc;
-     return $this;
+     if (is_set($acc))
+       return array_key_exists($acc, $this->_account) ? $this->_account[$acc] : $this->_account[$acc] = new Account($this, $acc);
+     else
+       return $this->_account['default'] = new Account($this);
    }
 
-   public function addCard($cardnum)
+   public function balance()
    {
-     $this->addAccount($cardnum);
-     return $this;
+     return $this->_account->balance();
    }
 
-   public function balance($acc = null)
+   public function calcSignature($data)
    {
-     $acc = ($acc == null) ?  $this->_defaultAcc : $acc;
-     $request = new P24RequestBalance($acc);
-     $this->account[$acc] = $response = new P24ResponseBalance($request);
-     return $response;
+     return sha1(md5($data.$this->_password));
    }
 }

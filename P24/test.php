@@ -9,3 +9,4 @@ $acc = $m->account();
 
 $bal = $acc->balance();
 $info = $acc->info();
+# end test

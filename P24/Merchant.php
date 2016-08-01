@@ -9,6 +9,7 @@ class Merchant {
   private $_id;
   private $_password;
   private $_test;
+  private $_wait;
 
   private $_account = ['default'=>null];
 
@@ -21,17 +22,23 @@ class Merchant {
        $this->_id       = array_key_exists("id",       $conf) ? $conf['id']       : false;
        $this->_password = array_key_exists("password", $conf) ? $conf['password'] : false;
        $this->_test     = array_key_exists("test",     $conf) ? $conf['test']     : false;
+       $this->_wait     = array_key_exists("wait",     $conf) ? $conf['wait']     : 0;
      }
    }
 
-   public function getId()
+   public function id()
    {
      return $this->_id;
    }
 
-   public function getPassword()
+   public function test()
    {
-     return $this->_password;
+     return $this->_test;
+   }
+
+   public function wait()
+   {
+     return $this->_wait;
    }
 
    public function account($acc = null)

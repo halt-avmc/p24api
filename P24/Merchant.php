@@ -2,7 +2,7 @@
 
 namespace halt\P24;
 
-use halt\P24\Card;
+use halt\P24\Account;
 
 class Merchant {
 
@@ -24,6 +24,7 @@ class Merchant {
        $this->_test     = array_key_exists("test",     $conf) ? $conf['test']     : false;
        $this->_wait     = array_key_exists("wait",     $conf) ? $conf['wait']     : 0;
      }
+     $this->_account['default'] = new Account($this);
    }
 
    public function id()
@@ -51,7 +52,7 @@ class Merchant {
 
    public function balance()
    {
-     return $this->_account->balance();
+     return $this->_account['default']->balance();
    }
 
    public function calcSignature($data)

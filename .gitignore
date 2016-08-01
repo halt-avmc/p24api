@@ -2,6 +2,7 @@
 .ftpconfig_
 composer.lock
 composer.phar
+index.php
 /vendor/
 
 # Commit your application's lock file http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file

@@ -2,6 +2,8 @@
 
 namespace halt\P24;
 
+use Httpful\Request;
+
 class Account
 {
   protected $rawXml;
@@ -55,9 +57,9 @@ class Account
     $xml_test = "<test>$test</test>";
 
     $xml_payment = "<payment />";
-    if (is_set($acc))
+    if (isset($acc))
     {
-      $xml_card = "<prop name="cardnum" value=\"$acc\" />";
+      $xml_card = "<prop name=\"cardnum\" value=\"$acc\" />";
       $xml_country = "<prop name=\"country\" value=\"UA\" />";
 
       $xml_payment = "<payment>$xml_card $xml_country</payment>";
@@ -65,14 +67,20 @@ class Account
 
     $xml_data = $xml_oper . $xml_wait . $xml_test . $xml_payment;
     $signature = $this->merchant->calcSignature($xml_data);
+    $xml_data = "<data>$xml_data</data>";
 
     $id = $this->merchant->id();
     $xml_merchant = "<merchant><id>$id</id><signature>$signature</signature></merchant>";
 
     $xml_request = "<request version=\"1.0\">$xml_merchant $xml_data</request>";
 
-    return $xml_request;
-    //return $this->balance; // <== This is what actually should be returned after testing;
+    $uri = "https://api.privatbank.ua/p24api/balance";
+    $response = \Httpful\Request::post($uri)->body($xml_request)->sendsXml()->expectsXml()->send();
+
+    var_dump($response); die();
+
+    //return $xml_request;
+    return $this->balance; // <== This is what actually should be returned after testing;
   }
 
   public function info()

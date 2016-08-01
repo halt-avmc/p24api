@@ -44,15 +44,20 @@ class Merchant {
 
    public function account($acc = null)
    {
-     if (is_set($acc))
+     if (isset($acc))
        return array_key_exists($acc, $this->_account) ? $this->_account[$acc] : $this->_account[$acc] = new Account($this, $acc);
      else
-       return $this->_account['default'] = new Account($this);
+       return $this->_account['default'];
    }
 
    public function balance()
    {
      return $this->_account['default']->balance();
+   }
+   
+   public function info()
+   {
+     return $this->_account['default']->info();
    }
 
    public function calcSignature($data)

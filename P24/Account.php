@@ -17,13 +17,13 @@ class Account
 
   protected $balance = [
     'av_balance'=>null,
-    'date'=>null,
-    'dyn'=>null,
+    'bal_date'=>null,
+    'bal_dyn'=>null,
     'balance'=>null,
     'fin_limit'=>null,
     'trade_limit'=>null,
   ];
-
+  
   protected $info = [
     'account'=>null,
     'card_number'=>null,
@@ -65,11 +65,11 @@ class Account
       $xml_payment = "<payment>$xml_card $xml_country</payment>";
     }
 
-    $xml_data = $xml_oper . $xml_wait . $xml_test . $xml_payment;
-    $signature = $this->merchant->calcSignature($xml_data);
-    $xml_data = "<data>$xml_data</data>";
+    $xml_inner_data = $xml_oper . $xml_wait . $xml_test . $xml_payment;
+    $xml_data = "<data>$xml_inner_data</data>";
 
     $id = $this->merchant->id();
+    $signature = $this->merchant->calcSignature($xml_inner_data);
     $xml_merchant = "<merchant><id>$id</id><signature>$signature</signature></merchant>";
 
     $xml_request = "<request version=\"1.0\">$xml_merchant $xml_data</request>";
@@ -77,23 +77,21 @@ class Account
     $uri = "https://api.privatbank.ua/p24api/balance";
     $response = \Httpful\Request::post($uri)->body($xml_request)->sendsXml()->expectsXml()->send();
 
-    $this->rawXml = $response['raw_body'];
+    $this->rawXml = $response->raw_body;
 
-    foreach ($response->data->info->cardbalance as $key=>$value)
+    foreach ($response->body->data->info->cardbalance->children() as $key=>$value)
     {
       if ($key=="card")
       {
-        foreach ($key as $k=>$v)
-          $this->info[$k]=$v;
+        foreach ($value->children() as $k=>$v)
+          $this->info[$k]=(string)$v;
         continue;
       }
-      $this->balance[$key]=$value;
+      $this->balance[$key]=(string)$value;
     }
-
-    //var_dump($response); die();
-
-    //return $xml_request;
-    return $this->balance; // <== This is what actually should be returned after testing;
+    
+    $this->status=self::STATUS_OK;
+    return $this->balance;
   }
 
   public function info()

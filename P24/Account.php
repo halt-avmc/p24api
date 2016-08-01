@@ -77,7 +77,20 @@ class Account
     $uri = "https://api.privatbank.ua/p24api/balance";
     $response = \Httpful\Request::post($uri)->body($xml_request)->sendsXml()->expectsXml()->send();
 
-    var_dump($response); die();
+    $this->rawXml = $response['raw_body'];
+
+    foreach ($response->data->info->cardbalance as $key=>$value)
+    {
+      if ($key=="card")
+      {
+        foreach ($key as $k=>$v)
+          $this->info[$k]=$v;
+        continue;
+      }
+      $this->balance[$key]=$value;
+    }
+
+    //var_dump($response); die();
 
     //return $xml_request;
     return $this->balance; // <== This is what actually should be returned after testing;

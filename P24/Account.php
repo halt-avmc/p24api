@@ -72,7 +72,7 @@ class Account
     $xml_request = "<request version=\"1.0\">$xml_merchant $xml_data</request>";
 
     return $xml_request;
-    return $this->balance; // <== This is what is actual should be returned after testing;
+    //return $this->balance; // <== This is what actually should be returned after testing;
   }
 
   public function info()

@@ -3,6 +3,7 @@
 namespace halt\P24;
 
 use Httpful\Request;
+use \SimpleXMLElement;
 
 class Account
 {
@@ -14,6 +15,8 @@ class Account
 
   protected $status;
   protected $merchant;
+
+  protected $balance_uri = "https://api.privatbank.ua/p24api/balance";
 
   protected $balance = [
     'av_balance'=>null,
@@ -48,37 +51,59 @@ class Account
     if ($this->status==self::STATUS_OK)
       return $this->balance;
 
+    $id   = $this->merchant->id();
     $wait = $this->merchant->wait();
     $test = $this->merchant->test();
     $oper = "cmt";
-
-    $xml_oper = "<oper>$oper</oper>";
-    $xml_wait = "<wait>$wait</wait>";
-    $xml_test = "<test>$test</test>";
-
-    $xml_payment = "<payment />";
+    
+    $req_string = "<request />";
+    $request = new SimpleXMLElement($req_string);
+	$request->addAttribute("version", "1.0");
+    
+    $merchant = $request->addChild("merchant");
+	$merchant->addChild("id", $id);
+    
+    $data = $request->addChild("data");    
+	$data->addChild("oper", $oper);
+	$data->addChild("wait", $wait);
+	$data->addChild("test", $test);
+    
+    $payment = $data->addChild("payment");
+    
     if (isset($this->info['account']))
     {
       $acc = $this->info['account'];
-      $xml_card = "<prop name=\"cardnum\" value=\"$acc\" />";
-      $xml_country = "<prop name=\"country\" value=\"UA\" />";
-
-      $xml_payment = "<payment>$xml_card $xml_country</payment>";
+      $prop = $payment->addChild("prop");
+        $prop->addAttribute("name", "cardnum");
+        $prop->addAttribute("value", $acc);
+      
+      $prop = $payment->addChild("prop");
+        $prop->addAttribute("name", "country");
+        $prop->addAttribute("value", "UA");      
     }
 
-    $xml_inner_data = $xml_oper . $xml_wait . $xml_test . $xml_payment;
-    $xml_data = "<data>$xml_inner_data</data>";
-
-    $id = $this->merchant->id();
+    $xml_inner_data = strip_tags($data->asXML(), "<oper><wait><test><payment><prop>");
     $signature = $this->merchant->calcSignature($xml_inner_data);
-    $xml_merchant = "<merchant><id>$id</id><signature>$signature</signature></merchant>";
-
-    $xml_request = "<request version=\"1.0\">$xml_merchant $xml_data</request>";
-
-    $uri = "https://api.privatbank.ua/p24api/balance";
-    $response = \Httpful\Request::post($uri)->body($xml_request)->sendsXml()->expectsXml()->send();
-
+    $merchant->addChild("signature", $signature);
+    
+    $xml_request = $request->asXML();
+    
+    
+    $response = \Httpful\Request::post($this->balance_uri)->body($xml_request)->sendsXml()->expectsXml()->send();
+    
     $this->rawXml = $response->raw_body;
+    
+    list( ,$info) = each($response->body->xpath('data/info'));
+    
+    foreach($info->children() as $k=>$child)
+    {
+	$name = $child->getName();
+	if ($name=="error")
+	{
+	    $this->status = self::STATUS_ERR;
+	    return false;
+	}
+    }
 
     foreach ($response->body->data->info->cardbalance->children() as $key=>$value)
     {
@@ -101,5 +126,13 @@ class Account
         $this->balance();
 
     return $this->info;
+  }
+  
+  public function xml()
+  {
+    if ($this->status==self::STATUS_NEW)
+        $this->balance();
+
+    return $this->rawXml;  
   }
 }

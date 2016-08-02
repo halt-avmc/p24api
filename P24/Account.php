@@ -57,8 +57,9 @@ class Account
     $xml_test = "<test>$test</test>";
 
     $xml_payment = "<payment />";
-    if (isset($acc))
+    if (isset($this->info['account']))
     {
+      $acc = $this->info['account'];
       $xml_card = "<prop name=\"cardnum\" value=\"$acc\" />";
       $xml_country = "<prop name=\"country\" value=\"UA\" />";
 

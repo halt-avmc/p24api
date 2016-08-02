@@ -14,7 +14,7 @@ class Merchant {
   private $_account = ['default'=>null];
 
   /**
-   * @param  array $conf confiuration array for merchant. Keys 'id', 'password', 'account', 'test'
+   * @param  array $conf confiuration array for merchant. Keys 'id', 'password', 'test', 'wait'
    * @return void
    */
    public function __construct($conf){
@@ -44,22 +44,34 @@ class Merchant {
 
    public function account($acc = null)
    {
-     if (isset($acc))
+     if (isset($acc) && !empty($acc))
        return array_key_exists($acc, $this->_account) ? $this->_account[$acc] : $this->_account[$acc] = new Account($this, $acc);
      else
        return $this->_account['default'];
    }
 
+   /*
+    * Get balance of default merchant account
+    * @return array with info about current balance (See https://api.privatbank.ua/balance.html)
+    */
    public function balance()
    {
-     return $this->_account['default']->balance();
+     return $this->account()->balance();
    }
    
+   /*
+    * @void   Get info about default merchant account
+    * @return array with info about default account (See https://api.privatbank.ua/balance.html)
+    */
    public function info()
    {
-     return $this->_account['default']->info();
+     return $this->account()->info();
    }
 
+   /*
+    * @string Data to sign
+    * @return calculated signature
+    */
    public function calcSignature($data)
    {
      return sha1(md5($data.$this->_password));

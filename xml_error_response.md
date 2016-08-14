@@ -18,4 +18,6 @@
 ```
 
 ## Invalid Signature
+```xml
 <?xml version="1.0" encoding="UTF-8"?><response version="1.0"><data><error message ="invalid signature" /></data></response>
+```

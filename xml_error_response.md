@@ -1,4 +1,4 @@
-# XML Error response
+# XML Errors
 
 ## Service is not working
 ```xml
@@ -19,5 +19,10 @@
 
 ## Invalid Signature
 ```xml
-<?xml version="1.0" encoding="UTF-8"?><response version="1.0"><data><error message ="invalid signature" /></data></response>
+<?xml version="1.0" encoding="UTF-8"?>
+<response version="1.0">
+  <data>
+    <error message ="invalid signature" />
+  </data>
+</response>
 ```

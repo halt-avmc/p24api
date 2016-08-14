@@ -4,6 +4,7 @@ namespace halt\P24;
 
 use Httpful\Request;
 use \SimpleXMLElement;
+use \DOMDocument;
 
 class Account
 {
@@ -39,25 +40,14 @@ class Account
     'src'=>null,              // ?? (M)
   ];
 
-  public function __construct($merchant, $account = null)
+  private function balanceXml()
   {
-    $this->merchant = $merchant;
-    $this->info['account'] = $account;
-    $this->status = self::STATUS_NEW;
-  }
-
-  public function balance()
-  {
-    if ($this->status==self::STATUS_OK)
-      return $this->balance;
-
     $id   = $this->merchant->id();
     $wait = $this->merchant->wait();
     $test = $this->merchant->test();
     $oper = "cmt";
 
-    $req_string = "<request />";
-    $request = new SimpleXMLElement($req_string);
+    $request = new SimpleXMLElement("<request />");
 	     $request->addAttribute("version", "1.0");
 
     $merchant = $request->addChild("merchant");
@@ -82,14 +72,48 @@ class Account
         $prop->addAttribute("value", "UA");
     }
 
-    $xml_inner_data = strip_tags($data->asXML(), "<oper><wait><test><payment><prop>");
-    $signature = $this->merchant->calcSignature($xml_inner_data);
+    $signature = $this->calcDataSignature($data);
     $merchant->addChild("signature", $signature);
 
-    $xml_request = $request->asXML();
-    $response = \Httpful\Request::post($this->balance_uri)->body($xml_request)->sendsXml()->expectsXml()->send();
+    // $xml essentially is the same as $request
+    // just is DOMDocument instead of SimpleXMLElement
+    // This is because saveXML() function with LIBXML_NOEMPTYTAG
+    // exists only in DOM and not in SimpleXML
+    $xml = dom_import_simplexml($request);
+    return $xml->ownerDocument->saveXML($xml, LIBXML_NOEMPTYTAG);
+  }
 
+  private function calcDataSignature($data)
+  {
+    $xml = dom_import_simplexml($data);
+    $inner_xml='';
+    $children=$xml->childNodes;
+    foreach($children as $node)
+        $inner_xml .= $node->ownerDocument->saveXML($node, LIBXML_NOEMPTYTAG);
+
+    return $this->merchant->calcSignature($inner_xml);
+  }
+
+  public function __construct($merchant, $account = null)
+  {
+    $this->merchant = $merchant;
+    $this->info['account'] = $account;
+    $this->status = self::STATUS_NEW;
+  }
+
+  public function balance()
+  {
+    if ($this->status==self::STATUS_OK)
+      return $this->balance;
+
+    $xml_request = $this->balanceXml();
+    $response = \Httpful\Request::post($this->balance_uri)->body($xml_request)->sendsXml()->expectsXml()->send();
     $this->rawXml = $response->raw_body;
+
+    list( ,$d) = each($response->body->xpath('data'));
+    list( ,$s) = each($response->body->xpath('merchant/signature'));
+
+    //if ($this->calcDataSignature($d) == $s);
 
     list( ,$info) = each($response->body->xpath('data/info'));
 

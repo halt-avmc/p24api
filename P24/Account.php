@@ -15,6 +15,7 @@ class Account
   const STATUS_OK ="OK";
 
   protected $status;
+  protected $error;
   protected $merchant;
 
   protected $balance_uri = "https://api.privatbank.ua/p24api/balance";
@@ -94,6 +95,33 @@ class Account
     return $this->merchant->calcSignature($inner_xml);
   }
 
+  private function checkResponseDataError($data)
+  {
+    list( , $data) = each($response->body->xpath('/response/data'));
+
+    if ($data->children()->getName() == "error")
+    {
+      $this->status = self::STATUS_ERR;
+      $this->error = $data->error->__toString();
+      return true;
+    }
+    return false;
+  }
+
+  private function checkResponseDataSignature($data)
+  {
+    list( , $data) = each($response->body->xpath('/response/data'));
+    list( , $signature) = each($response->body->xpath('merchant/signature'));
+
+    if ($this->calcDataSignature($data) !== $signature->__toString())
+    {
+      $this->status = self::STATUS_ERR;
+      $this->error = "Wrong response signature!";
+      return false;
+    }
+    return true;
+  }
+
   public function __construct($merchant, $account = null)
   {
     $this->merchant = $merchant;
@@ -110,10 +138,11 @@ class Account
     $response = \Httpful\Request::post($this->balance_uri)->body($xml_request)->sendsXml()->expectsXml()->send();
     $this->rawXml = $response->raw_body;
 
-    list( ,$d) = each($response->body->xpath('data'));
-    list( ,$s) = each($response->body->xpath('merchant/signature'));
-
-    //if ($this->calcDataSignature($d) == $s);
+    if ($this->checkResponseDataError($response->body) ||
+       !$this->checkResponseDataSignature($response->body))
+    {
+      return $this->error;
+    }
 
     list( ,$info) = each($response->body->xpath('data/info'));
 

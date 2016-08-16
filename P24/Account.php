@@ -41,6 +41,13 @@ class Account
     'src'=>null,              // ?? (M)
   ];
 
+  public function __construct($merchant, $account = null)
+  {
+    $this->merchant = $merchant;
+    $this->info['account'] = $account;
+    $this->status = self::STATUS_NEW;
+  }
+
   private function balanceXml()
   {
     $id   = $this->merchant->id();
@@ -97,21 +104,21 @@ class Account
 
   private function checkResponseDataError($data)
   {
-    list( , $data) = each($response->body->xpath('/response/data'));
+    list( , $data) = each($data->xpath('/response/data'));
 
     if ($data->children()->getName() == "error")
     {
       $this->status = self::STATUS_ERR;
-      $this->error = $data->error->__toString();
+      $this->error = $data->error['message'];
       return true;
     }
     return false;
   }
 
-  private function checkResponseDataSignature($data)
+  private function checkResponseDataSignature($in)
   {
-    list( , $data) = each($response->body->xpath('/response/data'));
-    list( , $signature) = each($response->body->xpath('merchant/signature'));
+    list( , $data) = each($in->xpath('/response/data'));
+    list( , $signature) = each($in->xpath('merchant/signature'));
 
     if ($this->calcDataSignature($data) !== $signature->__toString())
     {
@@ -122,11 +129,32 @@ class Account
     return true;
   }
 
-  public function __construct($merchant, $account = null)
+  private function parseResponseData($data)
   {
-    $this->merchant = $merchant;
-    $this->info['account'] = $account;
-    $this->status = self::STATUS_NEW;
+    list( ,$info) = each($data->xpath('data/info'));
+
+    foreach($info->children() as $child)
+    {
+    	$name = $child->getName();
+    	if ($name=="error")
+    	{
+    	    $this->status = self::STATUS_ERR;
+          $this->error = $info->error->__toString();
+    	    return false;
+    	}
+    }
+
+    foreach ($info->cardbalance->children() as $key=>$value)
+    {
+      if ($key=="card")
+      {
+        foreach ($value->children() as $k=>$v)
+          $this->info[$k]=(string)$v;
+        continue;
+      }
+      $this->balance[$key]=(string)$value;
+    }
+    return true;
   }
 
   public function balance()
@@ -144,30 +172,13 @@ class Account
       return $this->error;
     }
 
-    list( ,$info) = each($response->body->xpath('data/info'));
-
-    foreach($info->children() as $k=>$child)
+    if (!$this->parseResponseData($response->body))
     {
-    	$name = $child->getName();
-    	if ($name=="error")
-    	{
-    	    $this->status = self::STATUS_ERR;
-    	    return false;
-    	}
-    }
-
-    foreach ($response->body->data->info->cardbalance->children() as $key=>$value)
-    {
-      if ($key=="card")
-      {
-        foreach ($value->children() as $k=>$v)
-          $this->info[$k]=(string)$v;
-        continue;
-      }
-      $this->balance[$key]=(string)$value;
+      return $this->error;
     }
 
     $this->status=self::STATUS_OK;
+    $this->error=null;
     return $this->balance;
   }
 

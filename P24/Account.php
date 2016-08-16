@@ -4,7 +4,6 @@ namespace halt\P24;
 
 use Httpful\Request;
 use \SimpleXMLElement;
-use \DOMDocument;
 
 class Account
 {

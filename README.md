@@ -2,7 +2,6 @@
 
 Это PHP API для мерчанта [Privat24](https://www.privat24.ua/).
 
-<<<<<<< HEAD
 Инструкция по установке находится [здесь](https://github.com/halt-avmc/p24api/releases/latest).
 
 # Использование

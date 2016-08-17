@@ -13,7 +13,7 @@
   use halt\Merchant
 
   $id = <Merchant Id>;
-  $password = <Merchant Password>;
+  $password = "<Merchant Password>";
 
   $merchant = new Merchant(['id'=>$id, 'password'=>$password]);
 
@@ -24,7 +24,7 @@
 
   // Кроме карты по-умолчанию можно получить информацию и баланс
   // о других картах мерчанта
-  $card = <Any merchant card or account>;
+  $card = "<Any merchant card or account>";
   $balance = $merchant->account($card)->balance();
   $info    = $merchant->account($card)->info();
 ?>
@@ -65,6 +65,3 @@ invalid signature
 ```
 Wrong response signature!
 ```
-=======
-Latest release and installation instructions are available [here](https://github.com/halt-avmc/p24api/releases/latest)
->>>>>>> 5d4308ba74370925a84a50ffa3e5f34c54b4cf2a

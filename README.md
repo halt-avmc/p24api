@@ -2,6 +2,7 @@
 
 Это PHP API для мерчанта [Privat24](https://www.privat24.ua/).
 
+<<<<<<< HEAD
 Инструкция по установке находится [здесь](https://github.com/halt-avmc/p24api/releases/latest).
 
 # Использование
@@ -65,3 +66,6 @@ invalid signature
 ```
 Wrong response signature!
 ```
+=======
+Latest release and installation instructions are available [here](https://github.com/halt-avmc/p24api/releases/latest)
+>>>>>>> 5d4308ba74370925a84a50ffa3e5f34c54b4cf2a

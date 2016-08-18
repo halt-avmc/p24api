@@ -1,7 +1,9 @@
 {
     "name": "halt/p24",
     "description": "Api for PrivatBank merchant",
+    "keywords": ["P24","Privat24", "Merchant"],
     "require": {
+        "php": ">=5.3.0",
         "nategood/httpful": "^0.2.20"
     },
     "license": "GPL-3.0",
@@ -13,7 +15,8 @@
     "authors": [
         {
             "name": "Artem Bets",
-            "email": "halt.avmc@gmail.com"
+            "email": "halt.avmc@gmail.com",
+            "role": "Developer"
         }
     ]
 }

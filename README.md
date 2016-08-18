@@ -10,7 +10,7 @@
 <?php
   require (vendor/autoload.php);
 
-  use halt\Merchant
+  use halt\P24\Merchant
 
   $id = <Merchant Id>;
   $password = "<Merchant Password>";

@@ -18,6 +18,7 @@ class Account
   protected $merchant;
 
   protected $balance_uri = "https://api.privatbank.ua/p24api/balance";
+  protected $statements_uri = "https://api.privatbank.ua/p24api/rest_fiz";
 
   protected $balance = [
     'av_balance'=>null,   // Доступные средства. Это средства, которыми можно оперировать
@@ -40,10 +41,19 @@ class Account
     'src'=>null,              // ?? (M)
   ];
 
+  protected $statements = [
+    'sd'=>null,               // Параметр sd - начальная дата из запроса
+    'ed'=>null,               // Параметр ed - конечная дата из запроса
+    'status'=>null,           // Статус
+    'credit'=>null,           // Сумма поступлений
+    'debet'=>null,            // Сумма отчислений
+    'statement'=>[ ],         // Массив движений по счёту
+  ];
+
   public function __construct($merchant, $account = null)
   {
     $this->merchant = $merchant;
-    $this->info['account'] = $account;
+    $this->info['card_number'] = $account;
     $this->status = self::STATUS_NEW;
   }
 
@@ -67,9 +77,9 @@ class Account
 
     $payment = $data->addChild("payment");
 
-    if (isset($this->info['account']))
+    if (isset($this->info['card_number']))
     {
-      $acc = $this->info['account'];
+      $acc = $this->info['card_number'];
       $prop = $payment->addChild("prop");
         $prop->addAttribute("name", "cardnum");
         $prop->addAttribute("value", $acc);
@@ -77,6 +87,51 @@ class Account
       $prop = $payment->addChild("prop");
         $prop->addAttribute("name", "country");
         $prop->addAttribute("value", "UA");
+    }
+
+    $signature = $this->calcDataSignature($data);
+    $merchant->addChild("signature", $signature);
+
+    // $xml essentially is the same as $request
+    // just is DOMDocument instead of SimpleXMLElement
+    // This is because saveXML() function with LIBXML_NOEMPTYTAG
+    // exists only in DOM and not in SimpleXML
+    $xml = dom_import_simplexml($request);
+    return $xml->ownerDocument->saveXML($xml, LIBXML_NOEMPTYTAG);
+  }
+
+  private function statementsXml($start_date, $end_date)
+  {
+    $id   = $this->merchant->id();
+    $wait = $this->merchant->wait();
+    $test = $this->merchant->test();
+    $oper = "cmt";
+
+    $request = new SimpleXMLElement("<request />");
+	     $request->addAttribute("version", "1.0");
+
+    $merchant = $request->addChild("merchant");
+	     $merchant->addChild("id", $id);
+
+    $data = $request->addChild("data");
+    	$data->addChild("oper", $oper);
+    	$data->addChild("wait", $wait);
+    	$data->addChild("test", $test);
+
+    $payment = $data->addChild("payment");
+    $prop = $payment->addChild("prop");
+      $prop->addAttribute("name", "sd");
+      $prop->addAttribute("value", $start_date);
+    $prop = $payment->addChild("prop");
+      $prop->addAttribute("name", "ed");
+      $prop->addAttribute("value", $end_date);
+
+    if (isset($this->info['card_number']))
+    {
+      $acc = $this->info['card_number'];
+      $prop = $payment->addChild("prop");
+        $prop->addAttribute("name", "card");
+        $prop->addAttribute("value", $acc);
     }
 
     $signature = $this->calcDataSignature($data);
@@ -101,14 +156,14 @@ class Account
     return $this->merchant->calcSignature($inner_xml);
   }
 
-  private function checkResponseDataError($data)
+  private function checkResponseDataError($in)
   {
-    list( , $data) = each($data->xpath('/response/data'));
+    $data = $in->data;
 
-    if ($data->children()->getName() == "error")
+    if (isset($data->error))
     {
       $this->status = self::STATUS_ERR;
-      $this->error = $data->error['message'];
+      $this->error = $data->error['message']."";
       return true;
     }
     return false;
@@ -116,8 +171,8 @@ class Account
 
   private function checkResponseDataSignature($in)
   {
-    list( , $data) = each($in->xpath('/response/data'));
-    list( , $signature) = each($in->xpath('merchant/signature'));
+    $data = $in->data;
+    $signature = $in->merchant->signature;
 
     if ($this->calcDataSignature($data) !== $signature->__toString())
     {
@@ -128,30 +183,52 @@ class Account
     return true;
   }
 
-  private function parseResponseData($data)
+  private function parseResponseData($in)
   {
-    list( ,$info) = each($data->xpath('data/info'));
+    $info = $in->data->info;
 
-    foreach($info->children() as $child)
+    if(isset($info->error))
     {
-    	$name = $child->getName();
-    	if ($name=="error")
-    	{
-    	    $this->status = self::STATUS_ERR;
-          $this->error = $info->error->__toString();
-    	    return false;
-    	}
+  	    $this->status = self::STATUS_ERR;
+        $this->error = $info->error->__toString();
+  	    return false;
     }
 
-    foreach ($info->cardbalance->children() as $key=>$value)
+    if($info->count()==1 && empty($info->children()->getName()))
     {
-      if ($key=="card")
+  	    $this->status = self::STATUS_ERR;
+        $this->error = $info."";
+  	    return false;
+    }
+
+    if (isset($info->cardbalance))
+    {
+      $j = json_encode($info->cardbalance);
+      $balance = json_decode($j,true);
+      $info    = $balance['card'];
+      array_shift($balance);
+
+      foreach($info as $key=>$value)
       {
-        foreach ($value->children() as $k=>$v)
-          $this->info[$k]=(string)$v;
-        continue;
+        $info[$key] = (empty($value)) ? null : $value;
       }
-      $this->balance[$key]=(string)$value;
+
+      $this->balance = $balance;
+      $this->info = $info;
+    }
+
+    if (isset($info->statements))
+    {
+      $this->statements['status'] = $info->statements['status']."";
+      $this->statements['credit'] = $info->statements['credit']."";
+      $this->statements['debet']  = $info->statements['debet']."";
+
+      foreach($info->statements->children() as $child)
+      {
+        $st = json_decode(json_encode($child), true)['@attributes'];
+        $st["terminal"] = html_entity_decode($st["terminal"]);
+        $this->statements['statement'][] = $st;
+      }
     }
     return true;
   }
@@ -189,10 +266,36 @@ class Account
     return $this->info;
   }
 
+  public function statements($sd, $ed)
+  {
+    $this->statements['sd']=$sd;
+    $this->statements['ed']=$ed;
+
+    $xml_request = $this->statementsXml($sd, $ed);
+    $response = \Httpful\Request::post($this->statements_uri)->body($xml_request)->sendsXml()->expectsXml()->send();
+    $this->rawXml = $response->raw_body;
+
+    if ($this->checkResponseDataError($response->body)
+//    || !$this->checkResponseDataSignature($response->body)
+    )
+    {
+      return $this->error;
+    }
+
+    if (!$this->parseResponseData($response->body))
+    {
+      return $this->error;
+    }
+
+    $this->status=self::STATUS_OK;
+    $this->error=null;
+    return $this->statements;
+  }
+
   public function xml()
   {
-    if ($this->status==self::STATUS_NEW)
-        $this->balance();
+//    if ($this->status==self::STATUS_NEW)
+//        $this->balance();
 
     return $this->rawXml;
   }

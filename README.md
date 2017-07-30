@@ -29,7 +29,7 @@
   $info    = $merchant->account($card)->info();
 ?>
 ```
-Возвращаемые значения - это массив значений, которые описаны на сайте [API Приват24](https://api.privatbank.ua/balance.html)
+Возвращаемые значения - это массив значений, которые описаны на сайте [API Приват24](https://api.privatbank.ua/#p24/balance)
 ### Баланс
 ```PHP
 $balance = [
